@@ -1,0 +1,11 @@
+{
+  "display_name": "Tag 自动生图（服务端版）",
+  "loading_order": 100,
+  "js": "client/index.js",
+  "css": "client/style.css",
+  "author": "月岛唯",
+  "version": "1.0.0",
+  "homePage": "https://github.com/Qkiiie/st-tag-auto-image",
+  "auto_update": true,
+  "minimum_client_version": "1.12.0"
+}
