@@ -286,6 +286,15 @@ function extractFromChoices(json) {
     return null;
 }
 
+/** 规范化生图接口地址：去掉结尾斜杠；OpenAI 兼容模式下若只填到 …/v1 就补全图片路径 */
+function normalizeImageEndpoint(url, provider) {
+    let s = String(url || "").trim();
+    if (!s) return s;
+    s = s.replace(/\/+$/, "");
+    if ((provider || "") === "openai" && /\/(v1|api|openai)$/i.test(s)) s += "/images/generations";
+    return s;
+}
+
 function proxied(url, cfg) {
     const base = cfg.proxyBase ? String(cfg.proxyBase).trim() : '';
     if (!base || !/^https?:\/\//i.test(url || '')) return url;
@@ -346,7 +355,7 @@ export async function directGenerate(prompt, cfg) {
         } catch (e) {
             /* ignore */
         }
-        throw new Error(`HTTP ${res.status}${detail ? '：' + detail : ''}`);
+        throw new Error(`HTTP ${res.status}${detail ? '：' + detail : ''}｜请求：${proxied(url, cfg)}`);
     }
 
     const buf = await res.arrayBuffer();
@@ -405,6 +414,7 @@ export async function fetchImageAsDataUrl(url, cfg) {
 export async function generateImage(prompt, cfg) {
     const mode = cfg.mode || 'auto';
     const started = Date.now();
+    cfg = { ...cfg, endpoint: normalizeImageEndpoint(cfg.endpoint, cfg.provider) };
 
     if (mode !== 'direct') {
         try {
