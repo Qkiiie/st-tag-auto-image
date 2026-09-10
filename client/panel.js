@@ -2,7 +2,7 @@
  * 生图面板 UI：把原「Tag自动生图」面板搬到扩展里，并新增服务端相关选项。
  * 样式在 client/style.css（由 manifest.json 的 css 字段加载）。
  */
-import { SCRIPT_TAG, DEFAULTS, MODEL_PRESETS } from '../shared/resources.mjs';
+import { SCRIPT_TAG, DEFAULTS, MODEL_PRESETS, PROXY_PREFIX } from '../shared/resources.mjs';
 import * as S from './state.js';
 import * as P from './pipeline.js';
 import * as T from './tauritavern.js';
@@ -19,22 +19,9 @@ let lastGenerated = null;
 const PANEL_HTML = `
 <div id="taggen-card">
   <div class="tg-head">
-    <span class="tg-title">🎨 Tag 自动生图 · 服务端版</span>
+    <span class="tg-title">🍑 桃桃绘图</span>
     <button class="tg-close" id="tg-close" type="button">×</button>
   </div>
-
-  <div class="tg-sec">运行模式</div>
-  <label>生图位置</label>
-  <select id="tg-mode">
-    <option value="auto">自动（优先服务端插件，失败时浏览器直连）</option>
-    <option value="server">只用服务端插件</option>
-    <option value="direct">只用浏览器直连（原脚本行为）</option>
-  </select>
-  <div class="tg-row" style="margin-top:6px">
-    <input type="text" id="tg-server-base" placeholder="服务端插件地址（留空 = /api/plugins/tag-auto-image）">
-    <button class="tg-btn" id="tg-probe" type="button" style="flex:0 0 auto">🔌 检测服务端</button>
-  </div>
-  <label class="tg-toggle"><input type="checkbox" id="tg-store-key"><span class="tg-track"><span class="tg-thumb"></span></span><span>把 API Key 保存到服务端（浏览器不再长期保留）</span></label>
 
   <div class="tg-sec">接口设置</div>
   <label>接口类型</label>
@@ -47,14 +34,16 @@ const PANEL_HTML = `
   <input type="password" id="tg-key" autocomplete="off" placeholder="Bearer Token（通用/本地接口可留空）">
   <label>接口地址</label>
   <input type="text" id="tg-endpoint" autocomplete="off" placeholder="https://...">
-  <label>代理前缀（可选，CORS 被拦截或走中转时填，如 https://你的反代域名/）</label>
-  <input type="text" id="tg-proxy-base" autocomplete="off" placeholder="留空直连；填了则外部请求走 代理前缀+原地址">
+  <div id="tg-proxy-wrap" style="display:none">
+    <label>代理前缀（固定，不可修改）</label>
+    <input type="text" id="tg-proxy-base" autocomplete="off" disabled>
+    <div style="font-size:11.5px;color:#8f97ad;margin-top:4px;line-height:1.5">「OpenAI 兼容 / 通用 JSON」渠道经此反代转发；「NovelAI 官方」直连不走代理。</div>
+  </div>
   <label>模型</label>
   <input type="text" id="tg-model" list="tg-model-presets" autocomplete="off">
   <datalist id="tg-model-presets"></datalist>
   <div class="tg-row" style="margin-top:6px">
-    <input type="text" id="tg-models-endpoint" placeholder="模型列表地址（留空则从接口地址推导，如 …/v1/models）">
-    <button class="tg-btn" id="tg-fetch-models" type="button" style="flex:0 0 auto">📡 拉取模型</button>
+    <button class="tg-btn" id="tg-fetch-models" type="button">📡 拉取模型</button>
   </div>
   <label>认证方式（生图与拉取模型共用）</label>
   <select id="tg-models-auth">
@@ -214,25 +203,12 @@ export function ensurePanel() {
 /**
  * 显示/隐藏与接口类型相关的字段。
  */
-/** TauriTavern 下隐藏服务端相关控件，固定为客户端直连模式 */
+/** TauriTavern 没有 Node 后端：确保运行模式不会卡在「只用服务端」 */
 function applyTauriTavernUi() {
-    const root = ensurePanel();
-    const mode = root.querySelector('#tg-mode');
-    if (mode) {
-        mode.value = 'direct';
-        const serverOpt = root.querySelector('#tg-mode option[value="server"]');
-        if (serverOpt) serverOpt.disabled = true;
-    }
-    ['#tg-server-base', '#tg-probe'].forEach((sel) => {
-        const el = root.querySelector(sel);
-        if (el) el.disabled = true;
-    });
-    const storeKey = root.querySelector('#tg-store-key');
-    if (storeKey) {
-        storeKey.checked = false;
-        storeKey.disabled = true;
-        const label = storeKey.closest('label');
-        if (label) label.style.opacity = '.55';
+    const s = S.getSettings();
+    if (s.mode === 'server') {
+        s.mode = 'auto';
+        S.saveSettings();
     }
 }
 
@@ -240,6 +216,8 @@ export function refreshProviderFields() {
     const root = panelRoot;
     if (!root) return;
     const p = root.querySelector('#tg-provider').value;
+    const proxyWrap = root.querySelector('#tg-proxy-wrap');
+    if (proxyWrap) proxyWrap.style.display = p === 'nai' ? 'none' : '';
     root.querySelector('#tg-nai-extra').style.display = p === 'nai' ? '' : 'none';
     root.querySelector('#tg-openai-extra').style.display = p === 'openai' ? '' : 'none';
     root.querySelector('#tg-generic-extra').style.display = p === 'generic' ? '' : 'none';
@@ -275,12 +253,10 @@ function fillPanel(cfg) {
         const el = root.querySelector(sel);
         if (el) el.value = val ?? '';
     };
-    set('#tg-mode', cfg.mode || 'auto');
-    set('#tg-server-base', cfg.serverBase || '');
     set('#tg-provider', cfg.provider || 'nai');
     set('#tg-key', cfg.apiKey || '');
     set('#tg-endpoint', cfg.endpoint || '');
-    set('#tg-proxy-base', cfg.proxyBase || '');
+    set('#tg-proxy-base', PROXY_PREFIX);
     set('#tg-width', cfg.width);
     set('#tg-height', cfg.height);
     set('#tg-steps', cfg.steps);
@@ -291,7 +267,6 @@ function fillPanel(cfg) {
     set('#tg-openai-format', cfg.openaiResponseFormat || 'b64_json');
     set('#tg-generic-template', cfg.genericBodyTemplate);
     set('#tg-generic-path', cfg.genericImagePath);
-    set('#tg-models-endpoint', cfg.modelsEndpoint || '');
     set('#tg-models-auth', cfg.modelsAuth || 'bearer');
     set('#tg-timeout', cfg.timeoutMs || DEFAULTS.timeoutMs);
     set('#tg-pos', cfg.promptTemplate);
@@ -301,9 +276,6 @@ function fillPanel(cfg) {
     if (isurl) isurl.checked = !!cfg.genericImageIsUrl;
     const auto = root.querySelector('#tg-auto');
     if (auto) auto.checked = !!cfg.autoDetect;
-    const storeKey = root.querySelector('#tg-store-key');
-    if (storeKey) storeKey.checked = !!cfg.storeKeyOnServer;
-
     const input = root.querySelector('#tg-model');
     const cur = cfg.model || DEFAULTS.model;
     input.value = cur;
@@ -323,13 +295,11 @@ function readPanel() {
     };
     const scale = parseFloat(root.querySelector('#tg-scale').value);
     return {
-        mode: root.querySelector('#tg-mode').value,
-        serverBase: root.querySelector('#tg-server-base').value.trim(),
-        storeKeyOnServer: root.querySelector('#tg-store-key').checked,
+        storeKeyOnServer: false,
         provider: root.querySelector('#tg-provider').value,
         apiKey: root.querySelector('#tg-key').value.trim(),
         endpoint: root.querySelector('#tg-endpoint').value.trim(),
-        proxyBase: root.querySelector('#tg-proxy-base').value.trim(),
+        proxyBase: PROXY_PREFIX,
         model: root.querySelector('#tg-model').value.trim(),
         width: num('#tg-width', DEFAULTS.width),
         height: num('#tg-height', DEFAULTS.height),
@@ -342,7 +312,7 @@ function readPanel() {
         genericBodyTemplate: root.querySelector('#tg-generic-template').value,
         genericImagePath: root.querySelector('#tg-generic-path').value.trim(),
         genericImageIsUrl: root.querySelector('#tg-generic-isurl').checked,
-        modelsEndpoint: root.querySelector('#tg-models-endpoint').value.trim(),
+        modelsEndpoint: '',
         modelsAuth: root.querySelector('#tg-models-auth').value,
         timeoutMs: num('#tg-timeout', DEFAULTS.timeoutMs),
         promptTemplate: root.querySelector('#tg-pos').value,
@@ -568,7 +538,7 @@ async function directFetchModels(cfg) {
         }
     })();
     if (!url) throw new Error('请填写「模型列表地址」');
-    const target = cfg.proxyBase ? String(cfg.proxyBase).trim() + url : url;
+    const target = P.proxiedUrl(url, cfg);
 
     const headers = { Accept: 'application/json' };
     const key = String(cfg.apiKey || '').trim();
