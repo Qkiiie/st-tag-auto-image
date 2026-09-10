@@ -270,12 +270,43 @@ async function responseToImage(res, cfg) {
     const item = (json.data && json.data[0]) || json;
     if (item && item.url) return await urlToImage(String(item.url), cfg);
 
+    // 部分中转站把图片包在 chat.completion 形状里：choices[0].message.content[].image_url.url
+    const chatUrl = chatImageUrl(json);
+    if (chatUrl) {
+        if (/^https?:/i.test(chatUrl)) return await urlToImage(chatUrl, cfg);
+        const chatB64 = chatUrl.replace(/^data:[^,]*,/, '');
+        return { mime: 'image/png', base64: chatB64, dataUrl: toDataUrl(chatB64), bytes: Math.floor((chatB64.length * 3) / 4) };
+    }
+
     const b64 = extractBase64(json);
     if (b64) {
         const dataUrlStr = toDataUrl(b64);
         return { mime: 'image/png', base64: b64, dataUrl: dataUrlStr, bytes: Math.floor((b64.length * 3) / 4) };
     }
     throw new Error('上游响应里没有找到图片数据：' + JSON.stringify(json).slice(0, 300));
+}
+
+/**
+ * 从 chat.completion 形状的响应里取出图片地址（部分中转站把图片塞在这个形状里）。
+ * 支持 choices[0].message.content[].image_url.url、content[].url，以及字符串 content。
+ * @param {any} json
+ * @returns {string|null} 图片地址（data URL 或 http(s) URL）
+ */
+function chatImageUrl(json) {
+    const ch = json && Array.isArray(json.choices) ? json.choices[0] : null;
+    if (!ch) return null;
+    const msg = ch.message || ch.delta || {};
+    const content = msg.content;
+    if (Array.isArray(content)) {
+        for (const part of content) {
+            if (!part) continue;
+            const u = part.image_url ? (typeof part.image_url === 'string' ? part.image_url : part.image_url.url) : part.url;
+            if (typeof u === 'string' && u) return u;
+        }
+        return null;
+    }
+    if (typeof content === 'string' && /^(data:image\/|https?:)/i.test(content)) return content;
+    return null;
 }
 
 /**
