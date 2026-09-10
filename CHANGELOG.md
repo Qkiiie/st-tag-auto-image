@@ -1,5 +1,11 @@
 # 更新记录
 
+## 1.3.1
+
+- 服务端出站请求统一补上桌面 UA 与同源 Origin/Referer（对齐中转 Worker 的行为）：拉模型与生图不再必须依赖反代绕过 WAF
+- 新增 `transportHeaders()`，覆盖三个渠道的全部出站请求；`Authorization` 仍由渠道自身设置，不会被覆盖
+- `MODEL_PRESETS` 增加中转站的模型 id `v4_5`（中转站与官方 id 不同名，送官方 id 会 404）
+
 ## 1.3.0
 
 - 「拉取模型」优先调用酒馆自带的 chat-completions/status 服务端代理（由酒馆服务端请求 {接口地址}/models，无跨域、不经过反代），失败时自动回退到反代/直连
