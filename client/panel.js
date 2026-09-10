@@ -194,9 +194,6 @@ export function ensurePanel() {
     root.querySelector('#tg-fetch-models').addEventListener('click', () => {
         fetchModelsFromPanel().catch(S.toastError);
     });
-    root.querySelector('#tg-probe').addEventListener('click', () => {
-        probeFromPanel().catch(S.toastError);
-    });
     return root;
 }
 
