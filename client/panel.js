@@ -479,7 +479,14 @@ async function fetchModelsFromPanel() {
     }
     try {
         let models = null;
-        if ((cfg.mode || 'auto') !== 'direct') {
+        // ① 优先走酒馆自带的 chat-completions/status 代理：无跨域、不经过反代
+        try {
+            models = await stProxyFetchModels(cfg);
+        } catch (e) {
+            S.toastWarn('酒馆代理拉取未成功，改走其它通道：' + S.describeError(e));
+        }
+        // ② 退回 Node 服务端插件 / 反代直连
+        if (!models && (cfg.mode || 'auto') !== 'direct') {
             try {
                 const json = await S.callServer('/models', cfg, { force: cfg.mode === 'server' });
                 models = json.models;
