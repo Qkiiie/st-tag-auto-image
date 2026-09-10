@@ -154,6 +154,37 @@ function authHeaders(cfg) {
     return headers;
 }
 
+/** 桌面浏览器 UA：与中转 Worker 用的是同一串 */
+const DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+
+/**
+ * 出站请求头伪装层（对齐中转 Worker 的行为）。
+ *
+ * Node 的 fetch 默认带 node UA，且不带 Origin/Referer；部分中转站 / 反代会因此直接拒绝。
+ * 这里补上桌面 UA，并把 Origin/Referer 写成真实上游站的同源值——等价于中转 Worker 里那几行。
+ * @param {string} target 已套过代理前缀的最终地址
+ * @param {string} [originSource] 未套代理的真实上游地址；有值时用它的 origin 生成 Origin/Referer
+ * @returns {Record<string, string>}
+ */
+function transportHeaders(target, originSource) {
+    /** @type {Record<string, string>} */
+    const headers = {
+        'User-Agent': DESKTOP_UA,
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+    };
+    for (const candidate of [originSource, target]) {
+        try {
+            const u = new URL(candidate);
+            headers['Origin'] = u.origin;
+            headers['Referer'] = u.origin + '/';
+            break;
+        } catch (e) {
+            /* 候选地址不可解析，试下一个 */
+        }
+    }
+    return headers;
+}
+
 /**
  * 发送 JSON 请求。
  * @param {string} url
@@ -170,6 +201,7 @@ async function postJson(url, bodyObj, cfg) {
             headers: {
                 'Content-Type': 'application/json',
                 Accept: 'application/json, */*',
+                ...transportHeaders(target, url),
                 ...authHeaders(cfg),
             },
             body: JSON.stringify(bodyObj),
@@ -196,7 +228,7 @@ async function postJson(url, bodyObj, cfg) {
  */
 async function urlToImage(url, cfg) {
     const target = proxied(url, cfg.proxyBase);
-    const res = await fetchWithTimeout(target, { method: 'GET', headers: authHeaders(cfg) }, cfg.timeoutMs);
+    const res = await fetchWithTimeout(target, { method: 'GET', headers: { ...transportHeaders(target, url), ...authHeaders(cfg) } }, cfg.timeoutMs);
     if (!res.ok) throw new Error(`下载图片失败 HTTP ${res.status}｜地址：${target}`);
     const buf = Buffer.from(await res.arrayBuffer());
     const mime = (res.headers.get('content-type') || 'image/png').split(';')[0].trim() || 'image/png';
@@ -327,7 +359,7 @@ export async function fetchModels(cfg) {
     const target = proxied(url, cfg.proxyBase);
     const res = await fetchWithTimeout(
         target,
-        { method: 'GET', headers: { Accept: 'application/json', ...authHeaders(cfg) } },
+        { method: 'GET', headers: { Accept: 'application/json', ...transportHeaders(target, url), ...authHeaders(cfg) } },
         Math.min(Number(cfg.timeoutMs) || 60000, 60000),
     );
     if (!res.ok) {

@@ -85,6 +85,9 @@ export const MODEL_PRESETS = [
     ['nai-diffusion-3', 'NAI V3'],
     ['gpt-image-1', 'GPT Image 1'],
     ['dall-e-3', 'DALL·E 3'],
+    // 中转站（OpenAI 兼容渠道）的生图模型 id 与官方不同名：
+    // 官方 nai-diffusion-4-5-full 在中转站叫 v4_5（实测送官方 id 会 404 No available providers）
+    ['v4_5', '中转站：NAI V4.5'],
 ];
 
 /**
