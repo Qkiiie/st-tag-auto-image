@@ -7,7 +7,7 @@
  */
 
 export const PLUGIN_ID = 'tag-auto-image';
-export const PLUGIN_VERSION = '1.0.0';
+export const PLUGIN_VERSION = '1.3.3';
 
 /** 酒馆助手（TavernHelper）脚本时代沿用下来的标识，改动会破坏已有配置 */
 export const TAG_REGEX_ID = '7a2b0d3f-4c5e-4b6f-9a0d-2e3f4a5b6c7d';
