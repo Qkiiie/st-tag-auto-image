@@ -8,7 +8,7 @@
  *   client/panel.js    生图面板 UI
  *
  * 生图默认走服务端插件（需要在 config.yaml 开启 enableServerPlugins 并把本仓库 clone 进 plugins/），
- * 检测不到时按设置回退到浏览器直连（原「Tag自动生图」脚本的行为）。
+ * 检测不到时自动回退到浏览器直连。
  */
 import { SCRIPT_TAG } from '../shared/resources.mjs';
 import * as S from './state.js';
