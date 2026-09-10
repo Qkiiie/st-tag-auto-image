@@ -29,7 +29,14 @@ export const TAG_FIND_REGEX = '/<@tags>([\\s\\S]*?)<\\/@tags>/g';
 /** 正文末尾 tag 块：发送前给 AI 剥离用 */
 export const TAG_STRIP_REGEX = '/<@tags>[\\s\\S]*?<\\/@tags>/g';
 
-export const SCRIPT_TAG = 'Tag自动生图';
+export const SCRIPT_TAG = '桃桃绘图';
+
+/**
+ * 固定的反代前缀（Cloudflare Worker）。
+ * 只用于「OpenAI 兼容 / 通用 JSON」渠道；「NovelAI 官方」直连不走代理。
+ * 面板里不可编辑，需要更换只改这一处。
+ */
+export const PROXY_PREFIX = 'https://st-tag-auto-image.qkiiie.workers.dev/ttqk91f3/';
 
 export const DEFAULTS = {
     /** 生成模式：'auto' 自动探测服务端插件，'server' 强制服务端，'direct' 浏览器直连（原脚本行为） */
