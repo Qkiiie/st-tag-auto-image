@@ -219,6 +219,46 @@ async function extractPngFromZip(arrayBuffer) {
     throw new Error('ZIP 中未找到图片文件');
 }
 
+/** 从各种常见响应结构里抽取 base64 图片（与 server/util.mjs 的 extractBase64 保持一致） */
+function extractImageBase64(json) {
+    if (!json) return null;
+    if (typeof json === 'string') return json;
+    if (json.data && Array.isArray(json.data.images) && json.data.images[0]) {
+        const img = json.data.images[0];
+        return typeof img === 'string' ? img : (img.image || null);
+    }
+    if (json.data && typeof json.data.image === 'string') return json.data.image;
+    if (Array.isArray(json.data)) {
+        if (json.data[0] && json.data[0].image) return json.data[0].image;
+        if (json.data[0] && json.data[0].b64_json) return json.data[0].b64_json;
+        if (typeof json.data[0] === 'string') return json.data[0];
+    }
+    if (Array.isArray(json.images)) {
+        if (json.images[0] && json.images[0].image) return json.images[0].image;
+        if (typeof json.images[0] === 'string') return json.images[0];
+    }
+    if (typeof json.image === 'string') return json.image;
+    if (typeof json.images === 'string') return json.images;
+    if (typeof json.b64_json === 'string') return json.b64_json;
+    return null;
+}
+
+/** 抽取图片 URL（有的渠道返回 url 而不是 base64） */
+function extractImageUrl(json) {
+    if (!json || typeof json !== 'object') return null;
+    const cands = [
+        json.url,
+        json.image_url,
+        Array.isArray(json.data) && json.data[0] ? (json.data[0].url || json.data[0].image_url) : null,
+        Array.isArray(json.images) && json.images[0] ? (json.images[0].url || json.images[0].image_url) : null,
+        json.data && !Array.isArray(json.data) ? (json.data.url || json.data.image_url) : null,
+    ];
+    for (const c of cands) {
+        if (typeof c === 'string' && /^https?:/i.test(c)) return c;
+    }
+    return null;
+}
+
 function proxied(url, cfg) {
     const base = cfg.proxyBase ? String(cfg.proxyBase).trim() : '';
     if (!base || !/^https?:\/\//i.test(url || '')) return url;
@@ -305,7 +345,14 @@ export async function directGenerate(prompt, cfg) {
     const item = (json.data && json.data[0]) || json;
     if (item && item.b64_json) return toDataUrl(item.b64_json);
     if (item && item.url) return await fetchImageAsDataUrl(item.url, cfg);
-    throw new Error('响应中未找到图片数据（b64_json / url）');
+
+    // NovelAI 官方现在返回 JSON：{"images":[{"image":"<base64 png>"}]}（早期是 zip 包，两种都兼容）
+    const b64 = extractImageBase64(json);
+    if (b64) return toDataUrl(b64);
+    const imgUrl = extractImageUrl(json);
+    if (imgUrl) return await fetchImageAsDataUrl(imgUrl, cfg);
+
+    throw new Error('响应里没有找到图片数据｜响应片段：' + text.slice(0, 300));
 }
 
 /**
