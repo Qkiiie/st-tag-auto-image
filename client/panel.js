@@ -509,25 +509,75 @@ async function fetchModelsFromPanel() {
  * @returns {Promise<string[]>}
  */
 
-async function directFetchModels(cfg) {
-    const url = (() => {
-        try {
-            const u = new URL(cfg.endpoint || '');
-            const parts = u.pathname.replace(/\/+$/, '').split('/').filter(Boolean);
-            const i = parts.lastIndexOf('v1');
-            if (i >= 0) {
-                parts.length = i + 1;
-                u.pathname = '/' + parts.join('/') + '/models';
-            } else {
-                u.pathname = u.pathname.replace(/\/(images\/generations|images\/edits|generations|generate-image).*$/i, '') + '/models';
-            }
-            u.search = '';
-            return u.toString();
-        } catch (e) {
-            return '';
+/** 由「接口地址」推导模型列表地址（…/v1/images/generations → …/v1/models） */
+function deriveModelsUrl(endpoint) {
+    try {
+        const u = new URL(endpoint || '');
+        const parts = u.pathname.replace(/\/+$/, '').split('/').filter(Boolean);
+        const i = parts.lastIndexOf('v1');
+        if (i >= 0) {
+            parts.length = i + 1;
+            u.pathname = '/' + parts.join('/') + '/models';
+        } else {
+            u.pathname = u.pathname.replace(/\/(images\/generations|images\/edits|generations|generate-image).*$/i, '') + '/models';
         }
-    })();
-    if (!url) throw new Error('请填写「模型列表地址」');
+        u.search = '';
+        return u.toString();
+    } catch (e) {
+        return '';
+    }
+}
+
+/** 从各种包裹结构里收集模型 id（{data:[...]} / {data:{data:[...]}} / {models:[...]} 等） */
+function collectModelIds(json) {
+    const out = [];
+    const seen = new Set();
+    const push = (v) => {
+        const id = typeof v === 'string' ? v : (v && (v.id || v.name));
+        if (typeof id === 'string' && id && !seen.has(id)) { seen.add(id); out.push(id); }
+    };
+    const walk = (node, depth) => {
+        if (depth > 4 || !node) return;
+        if (Array.isArray(node)) { node.forEach((x) => push(x)); return; }
+        if (typeof node === 'object') {
+            ['data', 'models', 'result', 'items', 'list'].forEach((k) => {
+                if (node[k]) walk(node[k], depth + 1);
+            });
+        }
+    };
+    walk(json, 0);
+    return out;
+}
+
+/**
+ * 走酒馆自带的 chat-completions/status 代理拉模型：
+ * 由酒馆服务端去请求 {接口地址}/models，因此没有浏览器跨域问题，也不需要反代。
+ * （TauriTavern 与标准酒馆都实现了这个端点。）
+ */
+async function stProxyFetchModels(cfg) {
+    const ctx = S.getContext();
+    if (!ctx || typeof ctx.getRequestHeaders !== 'function') throw new Error('拿不到酒馆上下文');
+    const modelsUrl = deriveModelsUrl(cfg.endpoint);
+    if (!modelsUrl) throw new Error('接口地址无法推导模型列表地址');
+    const base = modelsUrl.replace(/\/models\/?$/i, '');
+    const res = await fetch('/api/backends/chat-completions/status', {
+        method: 'POST',
+        headers: ctx.getRequestHeaders(),
+        body: JSON.stringify({ chat_completion_source: 'openai', reverse_proxy: base, proxy_password: cfg.apiKey || '' }),
+    });
+    const text = await res.text();
+    let json = null;
+    try { json = text ? JSON.parse(text) : null; } catch (e) { throw new Error('酒馆代理返回非 JSON：' + text.slice(0, 120)); }
+    if (!res.ok) throw new Error('酒馆代理 HTTP ' + res.status + (text ? '：' + text.slice(0, 120) : ''));
+    if (json && json.error) throw new Error(json.message || '酒馆代理拉取失败');
+    const ids = collectModelIds(json);
+    if (!ids.length) throw new Error('酒馆代理没有返回模型列表');
+    return ids.sort();
+}
+
+async function directFetchModels(cfg) {
+    const url = deriveModelsUrl(cfg.endpoint);
+    if (!url) throw new Error('接口地址无法推导模型列表地址');
     const target = P.proxiedUrl(url, cfg);
 
     const headers = { Accept: 'application/json' };
