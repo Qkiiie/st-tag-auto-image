@@ -15,7 +15,7 @@ let panelRoot = null;
 /** @type {string|null} 面板里最近一次生成、尚未写入的图片 */
 let lastGenerated = null;
 
-/** 面板结构（保持与原脚本一致的 id，方便老用户上手） */
+/** 面板结构 */
 const PANEL_HTML = `
 <div id="taggen-card">
   <div class="tg-head">
@@ -359,7 +359,7 @@ export async function openPanel() {
         setPanelStatus(
             available
                 ? `✅ 服务端插件已连接：${base}`
-                : `⚠️ 未检测到服务端插件（将按运行模式回退到浏览器直连）${S.getLastProbeDetail() ? '｜' + S.getLastProbeDetail() : ''}`,
+                : `⚠️ 未检测到服务端插件（会自动改用客户端直连）${S.getLastProbeDetail() ? '｜' + S.getLastProbeDetail() : ''}`,
         );
     } catch (e) {
         setPanelStatus('服务端检测失败：' + S.describeError(e));
@@ -502,18 +502,10 @@ async function fetchModelsFromPanel() {
 }
 
 /**
- * 浏览器直连拉模型（原脚本逻辑）。
+ * 浏览器直连拉模型：从接口地址推导模型列表地址。
  * @param {Record<string, any>} cfg
  * @returns {Promise<string[]>}
  */
-/** 把用户填的模型列表地址补全：base 或 …/v1 → …/models */
-function normalizeModelsEndpoint(url) {
-    const s = String(url || '').trim();
-    if (!s) return '';
-    if (/\/models\/?$/i.test(s)) return s.replace(/\/+$/, '');
-    if (/\/(v1|api|openai)\/?$/i.test(s)) return s.replace(/\/+$/, '') + '/models';
-    return s;
-}
 
 async function directFetchModels(cfg) {
     const explicit = normalizeModelsEndpoint(String(cfg.modelsEndpoint || '').trim());
