@@ -344,15 +344,6 @@ export async function directGenerate(prompt, cfg) {
             n: cfg.nSamples || 1,
             size: (cfg.openaiSize || '') || `${cfg.width}x${cfg.height}`,
             response_format: cfg.openaiResponseFormat || 'b64_json',
-            // 该中转站后端是 NovelAI：把这些参数一并带上（仅为本站适配；OpenAI 官方接口对未知参数可能报 400）
-            negative_prompt: cfg.negativePrompt || '',
-            width: cfg.width,
-            height: cfg.height,
-            steps: cfg.steps,
-            scale: cfg.scale,
-            sampler: cfg.sampler,
-            n_samples: cfg.nSamples || 1,
-            noise_schedule: 'karras',
         };
     } else {
         url = cfg.endpoint;
