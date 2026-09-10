@@ -1,0 +1,247 @@
+/* Tag 自动生图（服务端版）—— 生图面板样式
+   全部作用域都限制在 #taggen-root / #tg-* 之下，避免污染酒馆其他界面。 */
+
+#taggen-root {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 2147483000;
+    display: flex;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    max-width: none;
+    max-height: none;
+    border: 0;
+    background: rgba(5, 8, 16, .62);
+    padding: 16px;
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    padding-left: max(16px, env(safe-area-inset-left));
+}
+
+#taggen-root[hidden] {
+    display: none;
+}
+
+#taggen-card {
+    box-sizing: border-box;
+    margin: auto;
+    width: min(640px, 96vw);
+    max-height: 88vh;
+    max-height: min(100%, calc(100dvh - 32px));
+    overflow: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    background: #171a26;
+    color: #f4f5fa;
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, .5);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    line-height: 1.5;
+}
+
+#taggen-root .tg-head {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: -18px -18px 14px;
+    padding: 14px 18px;
+    background: #171a26;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 16px 16px 0 0;
+}
+
+#taggen-root .tg-title {
+    font-size: 15px;
+    font-weight: 800;
+}
+
+#taggen-root .tg-close {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, .18);
+    background: rgba(255, 255, 255, .08);
+    color: #fff;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+#taggen-root .tg-sec {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    color: #ff7ab8;
+    margin: 16px 0 8px;
+}
+
+#taggen-root label {
+    display: block;
+    font-size: 12px;
+    color: #aeb4c8;
+    margin: 8px 0 3px;
+}
+
+#taggen-root input[type=text],
+#taggen-root input[type=password],
+#taggen-root select,
+#taggen-root textarea {
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid rgba(255, 255, 255, .13);
+    border-radius: 9px;
+    color: #f4f5fa;
+    padding: 8px 9px;
+    font-size: 13px;
+    outline: none;
+}
+
+#taggen-root textarea {
+    resize: vertical;
+    min-height: 52px;
+}
+
+#taggen-root input:focus,
+#taggen-root select:focus,
+#taggen-root textarea:focus {
+    border-color: rgba(255, 122, 184, .6);
+}
+
+#taggen-root .tg-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+#taggen-root .tg-row > * {
+    flex: 1;
+}
+
+#taggen-root .tg-row .w60 {
+    flex: 0 0 64px;
+}
+
+#taggen-root .tg-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+#taggen-root .tg-btn:hover {
+    background: rgba(255, 255, 255, .16);
+}
+
+#taggen-root .tg-btn.primary {
+    background: linear-gradient(90deg, #ff7ab8, #7ab8ff);
+    border: 0;
+}
+
+#taggen-root .tg-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+#taggen-root .tg-status {
+    margin-top: 12px;
+    font-size: 12px;
+    color: #aeb4c8;
+    min-height: 16px;
+    word-break: break-all;
+}
+
+#taggen-root .tg-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: #f4f5fa;
+    margin-top: 12px;
+    cursor: pointer;
+    user-select: none;
+}
+
+#taggen-root .tg-toggle input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+#taggen-root .tg-track {
+    position: relative;
+    display: inline-block;
+    width: 46px;
+    height: 26px;
+    background: rgba(255, 255, 255, .14);
+    border-radius: 999px;
+    transition: background .2s ease;
+    flex: 0 0 auto;
+}
+
+#taggen-root .tg-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform .2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .4);
+}
+
+#taggen-root .tg-toggle input:checked + .tg-track {
+    background: linear-gradient(90deg, #ff7ab8, #7ab8ff);
+}
+
+#taggen-root .tg-toggle input:checked + .tg-track .tg-thumb {
+    transform: translateX(20px);
+}
+
+#taggen-root #tg-preview {
+    max-width: 100%;
+    max-height: 54vh;
+    border-radius: 12px;
+    object-fit: contain;
+    border: 1px solid rgba(255, 255, 255, .15);
+    background: rgba(0, 0, 0, .25);
+}
+
+@media (max-width: 520px) {
+    #taggen-card {
+        padding: 14px;
+    }
+
+    #taggen-root .tg-head {
+        margin: -14px -14px 12px;
+        padding: 12px 14px;
+    }
+}
