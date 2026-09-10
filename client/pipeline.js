@@ -316,7 +316,7 @@ export function proxiedUrl(url, cfg) {
 }
 
 /**
- * 浏览器直连生成（原脚本行为，服务端插件不可用时使用）。
+ * 浏览器直连生成（不经过服务端，供客户端直连使用）。
  * @param {string} prompt
  * @param {Record<string, any>} cfg
  * @returns {Promise<string>} data URL
