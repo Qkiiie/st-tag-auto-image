@@ -17,6 +17,7 @@ import {
     LAST_IMG_KEY,
     UPLOAD_FOLDER,
     DEFAULTS,
+    PROXY_PREFIX,
     makeTagBeautifyRegex,
     makeTagHideRegex,
     makeNativeWorldbookData,
@@ -295,10 +296,23 @@ function normalizeImageEndpoint(url, provider) {
     return s;
 }
 
+/** 各渠道实际使用的代理前缀：NovelAI 官方直连不走代理，其余渠道用固定的反代地址 */
+export function proxyPrefixFor(cfg) {
+    const provider = (cfg && cfg.provider) || 'nai';
+    if (provider === 'nai') return '';
+    return PROXY_PREFIX || (cfg && cfg.proxyBase ? String(cfg.proxyBase).trim() : '');
+}
+
 function proxied(url, cfg) {
-    const base = cfg.proxyBase ? String(cfg.proxyBase).trim() : '';
+    const base = proxyPrefixFor(cfg);
     if (!base || !/^https?:\/\//i.test(url || '')) return url;
+    if (url.indexOf(base) === 0) return url;
     return base + url;
+}
+
+/** 供面板复用：给 URL 套上代理前缀（已套则原样返回） */
+export function proxiedUrl(url, cfg) {
+    return proxied(url, cfg);
 }
 
 /**
@@ -415,6 +429,7 @@ export async function generateImage(prompt, cfg) {
     const mode = cfg.mode || 'auto';
     const started = Date.now();
     cfg = { ...cfg, endpoint: normalizeImageEndpoint(cfg.endpoint, cfg.provider) };
+    cfg = { ...cfg, proxyBase: proxyPrefixFor(cfg) };
 
     if (mode !== 'direct') {
         try {
