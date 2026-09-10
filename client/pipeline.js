@@ -259,6 +259,33 @@ function extractImageUrl(json) {
     return null;
 }
 
+/** 解析 chat-completion 形状里包裹的图片（部分中转站会这样返回） */
+function extractFromChoices(json) {
+    if (!json || !Array.isArray(json.choices) || !json.choices[0]) return null;
+    const msg = json.choices[0].message || json.choices[0].delta || {};
+    const content = msg.content;
+    if (Array.isArray(content)) {
+        for (const part of content) {
+            if (!part) continue;
+            const u = (part.image_url && (part.image_url.url || part.image_url)) || part.url || part.image;
+            if (typeof u === 'string' && u) return u;
+        }
+    }
+    if (typeof content === 'string') {
+        const md = content.match(/!\[[^\]]*\]\((data:image\/[^)\s]+|https?:\/\/[^)\s]+)\)/);
+        if (md) return md[1];
+        const raw = content.match(/(data:image\/[a-z+]+;base64,[A-Za-z0-9+/=]+)/);
+        if (raw) return raw[1];
+    }
+    if (Array.isArray(msg.images) && msg.images[0]) {
+        const it = msg.images[0];
+        if (typeof it === 'string') return it;
+        const u2 = (it.image_url && (it.image_url.url || it.image_url)) || it.url || it.image;
+        if (typeof u2 === 'string' && u2) return u2;
+    }
+    return null;
+}
+
 function proxied(url, cfg) {
     const base = cfg.proxyBase ? String(cfg.proxyBase).trim() : '';
     if (!base || !/^https?:\/\//i.test(url || '')) return url;
@@ -347,10 +374,12 @@ export async function directGenerate(prompt, cfg) {
     if (item && item.url) return await fetchImageAsDataUrl(item.url, cfg);
 
     // NovelAI 官方现在返回 JSON：{"images":[{"image":"<base64 png>"}]}（早期是 zip 包，两种都兼容）
-    const b64 = extractImageBase64(json);
-    if (b64) return toDataUrl(b64);
-    const imgUrl = extractImageUrl(json);
-    if (imgUrl) return await fetchImageAsDataUrl(imgUrl, cfg);
+    // 有的中转站把图片塞在 chat-completion 形状里：choices[0].message.content[0].image_url.url
+    const found = extractImageBase64(json) || extractFromChoices(json) || extractImageUrl(json);
+    if (found) {
+        if (/^https?:/i.test(found)) return await fetchImageAsDataUrl(found, cfg);
+        return toDataUrl(found);
+    }
 
     throw new Error('响应里没有找到图片数据｜响应片段：' + text.slice(0, 300));
 }
