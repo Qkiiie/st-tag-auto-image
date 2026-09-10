@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>中转站体检</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 12px; background: #12151f; color: #f4f5fa;
+         font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 13px; }
+  h1 { font-size: 15px; margin: 0 0 8px; }
+  label { display: block; font-size: 12px; color: #aeb4c8; margin: 8px 0 3px; }
+  input { width: 100%; box-sizing: border-box; background: rgba(255,255,255,.06); color: #f4f5fa;
+          border: 1px solid rgba(255,255,255,.15); border-radius: 8px; padding: 8px; font-size: 13px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  button { padding: 9px 14px; font-size: 13px; font-weight: 700; color: #fff; border: 0; border-radius: 999px;
+           background: linear-gradient(90deg, #ff7ab8, #7ab8ff); cursor: pointer; }
+  button.ghost { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); }
+  pre { white-space: pre-wrap; word-break: break-all; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.12);
+        border-radius: 10px; padding: 10px; margin-top: 12px; max-height: 44vh; overflow: auto; font-size: 12px; line-height: 1.6; }
+  .hint { color: #8f97ad; font-size: 11.5px; margin-top: 6px; line-height: 1.6; }
+</style>
+</head>
+<body>
+  <h1>🔌 中转站体检</h1>
+  <div class="hint">在手机<b>系统浏览器</b>里打开本页效果最准。Key 只在本页使用，只发给你填的地址，不会外传。</div>
+
+  <label>地址（Base URL，含 /v1）</label>
+  <input id="base" value="https://router.momotale.com/v1" />
+
+  <label>API Key（可留空，先测连通性）</label>
+  <input id="key" type="password" autocomplete="off" placeholder="sk-..." />
+
+  <label>生图模型名（可留空）</label>
+  <input id="model" placeholder="例如 gpt-image-1 / flux-schnell / nai-diffusion-4-5-full" />
+
+  <div class="row">
+    <button id="net">① 测连通性 / 模型列表</button>
+    <button id="gen">② 测生图接口</button>
+    <button id="clear" class="ghost">清空</button>
+    <button id="copy" class="ghost">复制结果</button>
+  </div>
+
+  <pre id="out">等待测试…</pre>
+
+<script>
+  var out = document.getElementById('out');
+  function log(s) { out.textContent += (out.textContent ? '\n' : '') + s; }
+  function clear() { out.textContent = ''; }
+  function trimBase(v) { return String(v || '').trim().replace(/\/+$/, ''); }
+  function auth(key) { return key ? { Authorization: 'Bearer ' + key } : {}; }
+
+  async function show(label, url, init) {
+    log('→ ' + (init && init.method ? init.method : 'GET') + ' ' + url);
+    var t0 = Date.now();
+    try {
+      var r = await fetch(url, init);
+      log('  ' + (Date.now() - t0) + 'ms｜状态码 ' + r.status + '（ok=' + r.ok + '）｜content-type: ' + (r.headers.get('content-type') || '(无)'));
+      log('  CORS 头 access-control-allow-origin: ' + (r.headers.get('access-control-allow-origin') || '(无 → 说明它没开跨域)'));
+      var t = '';
+      try { t = (await r.text()).slice(0, 400); } catch (e) { t = '(读正文失败)'; }
+      log('  正文：' + t.replace(/\s+/g, ' '));
+    } catch (e) {
+      log('  ❌ ' + e.name + ': ' + e.message);
+      log('     若此处失败但地址栏能直接打开 → 基本就是跨域(CORS)未开放；若地址栏也打不开 → 域名/网络问题');
+    }
+    log('');
+  }
+
+  document.getElementById('net').onclick = async function () {
+    clear();
+    log('origin: ' + location.origin + '｜页面: ' + location.href);
+    log('');
+    var base = trimBase(document.getElementById('base').value);
+    var key = document.getElementById('key').value.trim();
+    var host = base.replace(/\/v1$/, '');
+    if (!base) { log('请填地址'); return; }
+    await show('站点根', host + '/', { method: 'GET' });
+    await show('模型列表（不带 key）', base + '/models', { method: 'GET' });
+    await show('模型列表（带 key）', base + '/models', { method: 'GET', headers: Object.assign({ Accept: 'application/json' }, auth(key)) });
+    await show('对照：一个肯定通的地址', 'https://image.novelai.net/v1/models', { method: 'GET' });
+  };
+
+  document.getElementById('gen').onclick = async function () {
+    var base = trimBase(document.getElementById('base').value);
+    var key = document.getElementById('key').value.trim();
+    var model = document.getElementById('model').value.trim() || 'gpt-image-1';
+    log('');
+    log('---------- 生图接口测试（model=' + model + '） ----------');
+    await show('OpenAI 兼容 /images/generations', base + '/images/generations', {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json', Accept: 'application/json, */*' }, auth(key)),
+      body: JSON.stringify({ model: model, prompt: '1girl, solo, masterpiece, best quality', n: 1, size: '1024x1024', response_format: 'b64_json' }),
+    });
+    await show('对照：/chat/completions（确认 key 本身有效）', base + '/chat/completions', {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, auth(key)),
+      body: JSON.stringify({ model: model, messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 }),
+    });
+  };
+
+  document.getElementById('clear').onclick = clear;
+  document.getElementById('copy').onclick = async function () {
+    var self = this;
+    try {
+      await navigator.clipboard.writeText(out.textContent);
+      self.textContent = '已复制';
+    } catch (e) {
+      var ta = document.createElement('textarea');
+      ta.value = out.textContent;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      self.textContent = '已复制';
+    }
+    setTimeout(function () { self.textContent = '复制结果'; }, 1500);
+  };
+</script>
+</body>
+</html>
