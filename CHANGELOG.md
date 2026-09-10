@@ -5,6 +5,7 @@
 - 回退 1.3.2 的「代理前缀解锁」：恢复为固定内置反代、面板只读（清空自填前缀那条路实测走不通）
 - 修复服务端生图解析：补齐 `chat.completion` 形状的图片响应（`choices[0].message.content[].image_url.url`），此前这类返回一律报「没有找到图片数据」
 - `responseToImage()` 遇到该形状里的 `http(s)` 图片地址会走下载分支
+- `PLUGIN_VERSION` 同步为 1.3.3（面板左下角与 `/ping`、`/status` 现在显示实际版本，此前一直停在 1.0.0）
 
 ## 1.3.2
 
