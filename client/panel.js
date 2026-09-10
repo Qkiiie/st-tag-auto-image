@@ -215,7 +215,7 @@ export function refreshProviderFields() {
     const p = root.querySelector('#tg-provider').value;
     const proxyWrap = root.querySelector('#tg-proxy-wrap');
     if (proxyWrap) proxyWrap.style.display = p === 'nai' ? 'none' : '';
-    root.querySelector('#tg-nai-extra').style.display = '';
+    root.querySelector('#tg-nai-extra').style.display = p === 'nai' ? '' : 'none';
     root.querySelector('#tg-openai-extra').style.display = p === 'openai' ? '' : 'none';
     root.querySelector('#tg-generic-extra').style.display = p === 'generic' ? '' : 'none';
 }
