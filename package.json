@@ -1,0 +1,23 @@
+{
+  "name": "st-tag-auto-image",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tag 自动生图：SillyTavern UI 扩展 + Node 服务端插件（读取正文末尾 <@tags> 自动生图并写回正则）",
+  "main": "index.mjs",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "sillytavern",
+    "sillytavern-extension",
+    "sillytavern-plugin",
+    "novelai",
+    "image-generation"
+  ],
+  "scripts": {
+    "check": "node --check index.mjs && node --check server/routes.mjs && node --check server/providers.mjs && node --check server/util.mjs && node --check server/config.mjs && node --check shared/resources.mjs",
+    "start": "node -e \"console.log('This package is not runnable on its own, it is loaded by the SillyTavern server (plugins/ directory).')\""
+  }
+}
