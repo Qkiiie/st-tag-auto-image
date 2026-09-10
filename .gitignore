@@ -1,0 +1,14 @@
+# 依赖与本地数据
+node_modules/
+data/
+*.log
+
+# 编辑器 / 系统
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# 运行时产物
+resources/*.local.json
