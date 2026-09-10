@@ -1,6 +1,6 @@
 /**
  * 服务端生图后端：NovelAI 官方 / OpenAI 兼容 / 通用 JSON 三种渠道。
- * 行为对齐原「Tag自动生图」脚本，区别只是把请求搬到 Node 端（天然绕开浏览器 CORS）。
+ * 请求在服务端发出，天然绕开浏览器 CORS。
  */
 import {
     describeError,
