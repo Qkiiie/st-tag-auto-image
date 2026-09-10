@@ -175,3 +175,127 @@ export async function saveChatMeta(patch) {
         return false;
     }
 }
+
+// ---------------------------------------------------------------------------
+// 服务端插件探测
+// ---------------------------------------------------------------------------
+
+/** @type {{base: string|null, checkedAt: number, available: boolean}} */
+const serverState = { base: null, checkedAt: 0, available: false };
+
+/** 最近一次探测失败的原因，用于面板提示 */
+let lastProbeDetail = '';
+
+/** 探测结果缓存时长（毫秒） */
+const PROBE_TTL = 30000;
+
+/**
+ * 服务端插件的候选地址。
+ * @returns {string[]}
+ */
+function serverCandidates() {
+    const s = getSettings();
+    /** @type {string[]} */
+    const list = [];
+    const manual = String(s.serverBase || '').trim().replace(/\/+$/, '');
+    if (manual) list.push(manual);
+    if (!list.includes(DEFAULT_SERVER_BASE)) list.push(DEFAULT_SERVER_BASE);
+    return list;
+}
+
+/**
+ * 探测服务端插件是否可用。
+ * @param {boolean} [force]
+ * @returns {Promise<{ available: boolean, base: string|null }>}
+ */
+export async function detectServer(force = false) {
+    // TauriTavern 后端是 Rust、没有 Node 运行时，不存在服务端插件：直接判定不可用，避免无意义探测
+    if (ttIsTauriTavern() && !String(getSettings().serverBase || '').trim()) {
+        serverState.available = false;
+        serverState.base = null;
+        serverState.checkedAt = Date.now();
+        lastProbeDetail = 'TauriTavern 无 Node 后端，已按客户端直连模式运行';
+        return { available: false, base: null };
+    }
+    const now = Date.now();
+    if (!force && now - serverState.checkedAt < PROBE_TTL) {
+        return { available: serverState.available, base: serverState.base };
+    }
+    for (const base of serverCandidates()) {
+        try {
+            const res = await fetch(`${base}/ping`, { method: 'GET', headers: getRequestHeaders(), cache: 'no-store' });
+            if (!res.ok) {
+                lastProbeDetail = `HTTP ${res.status}`;
+                continue;
+            }
+            const json = await res.json();
+            if (json && json.ok) {
+                serverState.base = base;
+                serverState.available = true;
+                serverState.checkedAt = now;
+                return { available: true, base };
+            }
+        } catch (e) {
+            lastProbeDetail = describeError(e);
+            /* 试下一个候选 */
+        }
+    }
+    serverState.base = null;
+    serverState.available = false;
+    serverState.checkedAt = now;
+    return { available: false, base: null };
+}
+
+/** 读取最近一次探测失败的原因 */
+export function getLastProbeDetail() {
+    return lastProbeDetail;
+}
+
+/**
+ * 调用服务端插件接口。
+ * @param {string} path
+ * @param {Record<string, any>} [body]
+ * @param {{ method?: string, force?: boolean }} [options]
+ * @returns {Promise<any>}
+ */
+export async function callServer(path, body, options = {}) {
+    const { available, base } = await detectServer(!!options.force);
+    if (!available || !base) {
+        throw new Error('未检测到服务端插件，请确认已 clone 到 plugins/ 并在 config.yaml 里开启 enableServerPlugins');
+    }
+    const method = options.method || (body ? 'POST' : 'GET');
+    const res = await fetch(`${base}${path}`, {
+        method,
+        headers: getRequestHeaders(),
+        body: body ? JSON.stringify(body) : undefined,
+        cache: 'no-store',
+    });
+    const text = await res.text();
+    let json = null;
+    try {
+        json = text ? JSON.parse(text) : null;
+    } catch (e) {
+        throw new Error(`服务端返回了非 JSON 响应（HTTP ${res.status}）：${text.slice(0, 200)}`);
+    }
+    if (!res.ok) {
+        throw new Error(json && json.error ? json.error : `服务端返回 HTTP ${res.status}`);
+    }
+    if (json && json.ok === false) throw new Error(json.error || '服务端处理失败');
+    return json;
+}
+
+/**
+ * 服务端是否已探测为可用（不发起请求）。
+ * @returns {boolean}
+ */
+export function isServerCached() {
+    return serverState.available;
+}
+
+/**
+ * 当前使用的服务端基地址。
+ * @returns {string|null}
+ */
+export function getServerBase() {
+    return serverState.base;
+}
