@@ -2,7 +2,7 @@
  * 生图面板 UI：把原「Tag自动生图」面板搬到扩展里，并新增服务端相关选项。
  * 样式在 client/style.css（由 manifest.json 的 css 字段加载）。
  */
-import { SCRIPT_TAG, DEFAULTS, MODEL_PRESETS, PROXY_PREFIX } from '../shared/resources.mjs';
+import { SCRIPT_TAG, DEFAULTS, MODEL_PRESETS, PROXY_PREFIX, PLUGIN_VERSION } from '../shared/resources.mjs';
 import * as S from './state.js';
 import * as P from './pipeline.js';
 import * as T from './tauritavern.js';
@@ -19,7 +19,7 @@ let lastGenerated = null;
 const PANEL_HTML = `
 <div id="taggen-card">
   <div class="tg-head">
-    <span class="tg-title">🍑 桃桃绘图</span>
+    <span class="tg-title">🍑 桃桃绘图</span><span id="tg-version" style="font-size:11px;color:#8f97ad;margin-left:6px"></span>
     <button class="tg-close" id="tg-close" type="button">×</button>
   </div>
 
@@ -251,6 +251,8 @@ function fillPanel(cfg) {
         if (el) el.value = val ?? '';
     };
     set('#tg-provider', cfg.provider || 'nai');
+    const ver = root.querySelector('#tg-version');
+    if (ver) ver.textContent = 'v' + PLUGIN_VERSION;
     set('#tg-key', cfg.apiKey || '');
     set('#tg-endpoint', cfg.endpoint || '');
     set('#tg-proxy-base', PROXY_PREFIX);
