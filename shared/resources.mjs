@@ -67,8 +67,8 @@ export const DEFAULTS = {
     modelsEndpoint: '',
     modelsAuth: 'bearer', // 'bearer' | 'x-api-key' | 'raw' | 'none'
     fetchedModels: [],
-    // CORS / 反代代理前缀（服务端模式下也生效）。默认用内置反代；面板可编辑，留空即直连
-    proxyBase: PROXY_PREFIX,
+    // CORS / 反代代理前缀（服务端模式下也生效）
+    proxyBase: '',
     /** 请求超时（毫秒） */
     timeoutMs: 180000,
     /** 把 API Key 保存到服务端（data/config.json），浏览器不再长期保留 */

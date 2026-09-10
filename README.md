@@ -57,7 +57,7 @@ TauriTavern 等原生客户端用不了这一项（其后端是 Rust、没有 No
 | API Key | NovelAI 官方填 pst- 开头的 Persistent Token；中转渠道填站点发给你的 sk- Key |
 | 接口地址 | NovelAI 官方留空即用官方地址；OpenAI 兼容填完整接口路径（**结尾不要带斜杠**） |
 | 模型 | 照站点给的名字填；NovelAI 官方可直接用内置预置 |
-| 代理前缀 | 默认已填内置反代，**可编辑**：留空 = 服务端直接请求目标站。仅在 OpenAI 兼容 / 通用 JSON 下显示 |
+| 代理前缀 | **固定、不可编辑**，见下方「内置反代」。仅在 OpenAI 兼容 / 通用 JSON 下显示 |
 | 模型列表 | 没有输入框：点「📡 拉取模型」会自动从接口地址推导 …/v1/models，并走反代 |
 | 认证方式 | Authorization: Bearer / x-api-key / 原样 / 无认证 |
 | 正向提示词 | 原样发送；自动生图时 <@tags> 内容会追加在它后面 |
@@ -87,7 +87,7 @@ OpenAI 兼容渠道推荐配置：
 
 **它解决什么**：客户端的网络层（跨域 / 风控）可能直接拦掉发往图片接口的请求，表现为 Failed to fetch。反代把请求经由 Cloudflare 转发一次，并补上 CORS 响应头，请求就能正常送达。
 
-**默认地址写在哪**：shared/resources.mjs 里的 PROXY_PREFIX 常量，它同时是设置项的默认值。面板里可以改、可以清空；留空即由服务端直连。
+**地址写在哪**：shared/resources.mjs 里的 PROXY_PREFIX 常量。面板里是只读的，用户改不了——要换地址只改这一处。
 
 **自己部署一个**：仓库里已经带了 Worker 源码与配置：
 
