@@ -510,8 +510,7 @@ async function fetchModelsFromPanel() {
  */
 
 async function directFetchModels(cfg) {
-    const explicit = normalizeModelsEndpoint(String(cfg.modelsEndpoint || '').trim());
-    const url = explicit || (() => {
+    const url = (() => {
         try {
             const u = new URL(cfg.endpoint || '');
             const parts = u.pathname.replace(/\/+$/, '').split('/').filter(Boolean);
