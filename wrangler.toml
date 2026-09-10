@@ -1,0 +1,5 @@
+# Cloudflare Workers 配置（只用于「Deploy to Cloudflare」一键部署中转 Worker；
+# 与本仓库的 SillyTavern 扩展/服务端插件无关，不影响它们的使用）
+name = "tt-proxy"
+main = "worker/worker.js"
+compatibility_date = "2024-09-23"
