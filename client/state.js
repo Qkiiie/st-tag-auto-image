@@ -44,7 +44,7 @@ export function getContext() {
 }
 
 /**
- * 酒馆助手（TavernHelper）全局对象。存在时优先用它写正则 / 世界书，保持与原脚本一致。
+ * 酒馆助手（TavernHelper）全局对象。存在时优先用它写正则 / 世界书，兼容老配置。
  * @returns {any}
  */
 export function tavernHelper() {
