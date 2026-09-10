@@ -30,9 +30,9 @@ function addExtensionMenuButton() {
     }
     if (document.getElementById('taggen-menu-button')) return true;
     const button = $(
-        `<div id="taggen-menu-button" class="list-group-item flex-container flexGap5 interactable" tabindex="0" title="Tag 自动生图（服务端版）">
+        `<div id="taggen-menu-button" class="list-group-item flex-container flexGap5 interactable" tabindex="0" title="桃桃绘图">
             <div class="fa-solid fa-palette extensionsMenuExtensionButton"></div>
-            <span>生图面板</span>
+            <span>桃桃绘图</span>
         </div>`,
     );
     button.on('click', () => UI.openPanel().catch(S.toastError));
@@ -85,8 +85,8 @@ async function registerSlashCommands() {
         if (!parser || typeof parser.addCommandObject !== 'function') return false;
         parser.addCommandObject({
             command: '生图',
-            aliases: ['tag生图', '自动生图'],
-            helpString: '打开 Tag 自动生图面板（服务端版）',
+            aliases: ['tag生图', '自动生图', '桃桃绘图', '桃桃'],
+            helpString: '打开桃桃绘图面板',
             returns: '无',
             namedArgumentList: [],
             unnamedArgumentList: [],
