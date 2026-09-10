@@ -35,9 +35,9 @@ const PANEL_HTML = `
   <label>接口地址</label>
   <input type="text" id="tg-endpoint" autocomplete="off" placeholder="https://...">
   <div id="tg-proxy-wrap" style="display:none">
-    <label>代理前缀（固定，不可修改）</label>
-    <input type="text" id="tg-proxy-base" autocomplete="off" disabled>
-    <div style="font-size:11.5px;color:#8f97ad;margin-top:4px;line-height:1.5">「OpenAI 兼容 / 通用 JSON」渠道经此反代转发；「NovelAI 官方」直连不走代理。</div>
+    <label>代理前缀（留空 = 直连）</label>
+    <input type="text" id="tg-proxy-base" autocomplete="off" placeholder="留空则直接请求目标站；默认已填内置反代">
+    <div style="font-size:11.5px;color:#8f97ad;margin-top:4px;line-height:1.5">「OpenAI 兼容 / 通用 JSON」渠道经此前缀转发；<b>留空即由酒馆服务端直接请求目标站</b>（无需绕跨域，但可能被对方 WAF 拦）。「NovelAI 官方」直连不走代理。</div>
   </div>
   <label>模型</label>
   <input type="text" id="tg-model" list="tg-model-presets" autocomplete="off">
@@ -255,7 +255,7 @@ function fillPanel(cfg) {
     if (ver) ver.textContent = 'v' + PLUGIN_VERSION;
     set('#tg-key', cfg.apiKey || '');
     set('#tg-endpoint', cfg.endpoint || '');
-    set('#tg-proxy-base', PROXY_PREFIX);
+    set('#tg-proxy-base', cfg.proxyBase ?? PROXY_PREFIX);
     set('#tg-width', cfg.width);
     set('#tg-height', cfg.height);
     set('#tg-steps', cfg.steps);
@@ -298,7 +298,7 @@ function readPanel() {
         provider: root.querySelector('#tg-provider').value,
         apiKey: root.querySelector('#tg-key').value.trim(),
         endpoint: root.querySelector('#tg-endpoint').value.trim(),
-        proxyBase: PROXY_PREFIX,
+        proxyBase: root.querySelector('#tg-proxy-base').value.trim(),
         model: root.querySelector('#tg-model').value.trim(),
         width: num('#tg-width', DEFAULTS.width),
         height: num('#tg-height', DEFAULTS.height),

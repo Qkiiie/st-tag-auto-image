@@ -296,11 +296,12 @@ function normalizeImageEndpoint(url, provider) {
     return s;
 }
 
-/** 各渠道实际使用的代理前缀：NovelAI 官方直连不走代理，其余渠道用固定的反代地址 */
+/** 各渠道实际使用的代理前缀：NovelAI 官方直连不走代理；其余渠道用设置里的值（默认内置反代，留空即直连） */
 export function proxyPrefixFor(cfg) {
     const provider = (cfg && cfg.provider) || 'nai';
     if (provider === 'nai') return '';
-    return PROXY_PREFIX || (cfg && cfg.proxyBase ? String(cfg.proxyBase).trim() : '');
+    if (cfg && cfg.proxyBase != null) return String(cfg.proxyBase).trim();
+    return String(DEFAULTS.proxyBase || '').trim();
 }
 
 function proxied(url, cfg) {
