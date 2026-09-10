@@ -103,14 +103,6 @@ function openaiBody(prompt, cfg) {
         n: cfg.nSamples || 1,
         size,
         response_format: cfg.openaiResponseFormat || 'b64_json',
-        negative_prompt: cfg.negativePrompt || '',
-        width: cfg.width || 832,
-        height: cfg.height || 1216,
-        steps: cfg.steps || 28,
-        scale: cfg.scale || 9,
-        sampler: cfg.sampler || 'k_dpmpp_2m',
-        n_samples: cfg.nSamples || 1,
-        noise_schedule: 'karras',
     };
 }
 
